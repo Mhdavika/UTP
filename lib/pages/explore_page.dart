@@ -20,7 +20,7 @@ class ExplorePage extends StatelessWidget {
           return GestureDetector(
             onTap: () => Navigator.push(
               context,
-              MaterialPageRoute(builder: (_) => DetailPage()),
+              MaterialPageRoute(builder: (_) => DetailPage(villaId: '', villaData: {},)),
             ),
             child: CardItem(),
           );

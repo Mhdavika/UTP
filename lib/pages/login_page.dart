@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
-import 'otp_page.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:utp_flutter/app_session.dart';
+import 'package:utp_flutter/main.dart';
+import 'package:utp_flutter/pages/register_page.dart';
 
 class LoginPage extends StatefulWidget {
   @override
@@ -7,183 +10,195 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> {
-  String? selectedCountry = "ID";
-  final TextEditingController phoneController = TextEditingController();
+  final TextEditingController emailOrPhoneController = TextEditingController();
+  final TextEditingController passwordController = TextEditingController();
+
+  bool isLoading = false;
+  String? errorMessage;
+
+  Future<void> _login() async {
+    final input = emailOrPhoneController.text.trim();
+    final password = passwordController.text.trim();
+
+    if (input.isEmpty || password.isEmpty) {
+      setState(() {
+        errorMessage = "Email/nomor dan password wajib diisi";
+      });
+      return;
+    }
+
+    setState(() {
+      isLoading = true;
+      errorMessage = null;
+    });
+
+    try {
+      QuerySnapshot<Map<String, dynamic>> snap;
+
+      // Jika mengandung "@", berarti login pakai email
+      if (input.contains("@")) {
+        snap = await FirebaseFirestore.instance
+            .collection('users')
+            .where('email', isEqualTo: input)
+            .limit(1)
+            .get();
+      } else {
+        // Login menggunakan nomor telepon
+        String phone = input;
+        if (phone.startsWith("0")) phone = phone.substring(1);
+
+        snap = await FirebaseFirestore.instance
+            .collection('users')
+            .where('phone', isEqualTo: phone)
+            .limit(1)
+            .get();
+      }
+
+      if (snap.docs.isEmpty) {
+        setState(() {
+          errorMessage = "Akun tidak ditemukan";
+        });
+      } else {
+        final doc = snap.docs.first;
+        final data = doc.data();
+
+        final String passwordDb = (data['password'] ?? '').toString();
+
+        // cek password
+        if (passwordDb == password) {
+          // ambil phone dari database
+          final String phoneFromDb = (data['phone'] ?? '').toString();
+
+          // simpan session (AppSession-mu yang lama, TANPA diubah)
+          final ok = await AppSession.saveUser(phoneFromDb);
+
+          if (!ok) {
+            setState(() {
+              errorMessage = "Gagal menyimpan sesi pengguna";
+            });
+          } else {
+            if (!mounted) return;
+
+            // Masuk ke halaman utama (dengan Navigasi Bottom)
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (_) => const MainPage()),
+            );
+          }
+        } else {
+          setState(() {
+            errorMessage = "Password salah";
+          });
+        }
+      }
+    } catch (e) {
+      setState(() {
+        errorMessage = "Terjadi kesalahan: $e";
+      });
+    }
+
+    setState(() => isLoading = false);
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: AppBar(backgroundColor: Colors.white,
-      automaticallyImplyLeading: false,),
+
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        automaticallyImplyLeading: false,
+        elevation: 0,
+      ),
 
       body: SingleChildScrollView(
+        // agar tidak overflow di layar kecil
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
+          padding: const EdgeInsets.symmetric(horizontal: 24),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              /// JUDUL
+              const SizedBox(height: 60),
+
               const Text(
-                "Masuk atau daftar di SewaVilla",
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                "Masuk ke Akun Anda",
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
 
-              const SizedBox(height: 25),
+              const SizedBox(height: 30),
 
-              /// NEGARA
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                decoration: BoxDecoration(
-                  border: Border.all(color: Colors.black45),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: DropdownButtonHideUnderline(
-                        child: DropdownButton(
-                          isExpanded: true,
-                          value: selectedCountry,
-                          items: const [
-                            DropdownMenuItem(
-                              value: "ID",
-                              child: Text(
-                                "Negara / Wilayah\nIndonesia (+62)",
-                                style: TextStyle(height: 1.3),
-                              ),
-                            ),
-                          ],
-                          onChanged: (value) {
-                            setState(() => selectedCountry = value);
-                          },
-                        ),
-                      ),
-                    ),
-                  ],
+              // Email / Phone
+              TextField(
+                controller: emailOrPhoneController,
+                decoration: const InputDecoration(
+                  labelText: "Email atau Nomor Telepon",
+                  border: OutlineInputBorder(),
                 ),
               ),
 
               const SizedBox(height: 15),
 
-              /// INPUT NOMOR
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                decoration: BoxDecoration(
-                  border: Border.all(color: Colors.black45),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: TextField(
-                  controller: phoneController,
-                  keyboardType: TextInputType.phone,
-                  decoration: const InputDecoration(
-                    border: InputBorder.none,
-                    labelText: "Nomor Telepon",
-                    prefixText: "+62   ",
-                  ),
+              // Password
+              TextField(
+                controller: passwordController,
+                obscureText: true,
+                decoration: const InputDecoration(
+                  labelText: "Password",
+                  border: OutlineInputBorder(),
                 ),
               ),
 
               const SizedBox(height: 15),
 
-              const Text(
-                "Kami akan mengirimkan SMS untuk mengonfirmasi nomor anda. Dikenakan tarif standar SMS.",
-                style: TextStyle(fontSize: 13, color: Colors.black54),
-              ),
+              if (errorMessage != null)
+                Text(
+                  errorMessage!,
+                  style: const TextStyle(color: Colors.red, fontSize: 13),
+                ),
 
-              const SizedBox(height: 25),
+              const SizedBox(height: 20),
 
-              /// TOMBOL LANJUTKAN
+              // Tombol Login
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.grey[300],
-                    elevation: 0,
                     padding: const EdgeInsets.symmetric(vertical: 14),
                   ),
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) =>
-                            OtpPage(phoneNumber: phoneController.text),
-                      ),
-                    );
-                  },
-                  child: const Text(
-                    "Lanjutkan",
-                    style: TextStyle(fontSize: 16, color: Colors.black),
-                  ),
+                  onPressed: isLoading ? null : _login,
+                  child: isLoading
+                      ? const CircularProgressIndicator(color: Colors.white)
+                      : const Text("Login", style: TextStyle(fontSize: 16)),
                 ),
               ),
 
-              const SizedBox(height: 25),
+              const SizedBox(height: 18),
 
-              /// GARIS ATAU
+              // Tombol ke Register
               Row(
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Expanded(child: Divider(thickness: 1)),
-                  const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 10),
-                    child: Text("Atau"),
+                  const Text("Belum punya akun? "),
+                  TextButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const RegisterPage(),
+                        ),
+                      );
+                    },
+                    child: const Text("Daftar"),
                   ),
-                  Expanded(child: Divider(thickness: 1)),
                 ],
               ),
 
-              const SizedBox(height: 25),
-
-              /// LOGIN EMAIL
-              _loginButton(
-                icon: Icons.email_outlined,
-                text: "Lanjutkan dengan Email",
-              ),
-
-              const SizedBox(height: 12),
-
-              /// LOGIN FACEBOOK
-              _loginButton(
-                icon: Icons.facebook,
-                text: "Lanjutkan dengan Facebook",
-              ),
-
-              const SizedBox(height: 12),
-
-              /// LOGIN GOOGLE
-              _loginButton(
-                icon: Icons.g_mobiledata,
-                text: "Lanjutkan dengan Google",
-              ),
+              const SizedBox(height: 40),
             ],
           ),
-        ),
-      ),
-    );
-  }
-
-  /// WIDGET TOMBOL LOGIN EKSTRA
-  Widget _loginButton({required IconData icon, required String text}) {
-    return SizedBox(
-      width: double.infinity,
-      child: ElevatedButton(
-        style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.grey[300],
-          elevation: 0,
-          padding: const EdgeInsets.symmetric(vertical: 13),
-        ),
-        onPressed: () {},
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, color: Colors.black),
-            const SizedBox(width: 8),
-            Text(
-              text,
-              style: const TextStyle(fontSize: 15, color: Colors.black),
-            ),
-          ],
         ),
       ),
     );

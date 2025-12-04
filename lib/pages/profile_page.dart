@@ -1,9 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:utp_flutter/app_session.dart';
+
 import 'edit_profile_page.dart';
 import 'login_page.dart';
+import 'my_bookings_page.dart';
 
 class ProfilePage extends StatelessWidget {
-  final bool isLoggedIn = true; // ubah ke false untuk test logout
+  const ProfilePage({super.key});
+
+  bool get isLoggedIn => AppSession.phone != null;
 
   @override
   Widget build(BuildContext context) {
@@ -22,12 +27,14 @@ class ProfilePage extends StatelessWidget {
     );
   }
 
+  // ===============================
   //  UI Jika BELUM LOGIN
+  // ===============================
   Widget _buildLoggedOutUI(BuildContext context) {
     return Center(
       child: ElevatedButton(
         onPressed: () {
-          Navigator.push(
+          Navigator.pushReplacement(
             context,
             MaterialPageRoute(builder: (_) => LoginPage()),
           );
@@ -37,28 +44,47 @@ class ProfilePage extends StatelessWidget {
     );
   }
 
+  // ===============================
   //  UI Jika SUDAH LOGIN
+  // ===============================
   Widget _buildLoggedInUI(BuildContext context) {
+    final String name = AppSession.name ?? "Pengguna";
+    final String email = AppSession.email ?? "-";
+    final String? profileImg = AppSession.profileImg; // FOTO PROFIL
+
     return ListView(
       padding: const EdgeInsets.all(20),
       children: [
-        /// Foto Profil + Nama
+        /// Foto Profil + Nama + Email
         Center(
           child: Column(
             children: [
+              // FOTO PROFIL DARI SUPABASE
               CircleAvatar(
-                radius: 45,
+                radius: 55,
                 backgroundColor: Colors.grey[300],
-                child: Icon(Icons.person, size: 50, color: Colors.grey[600]),
+                backgroundImage: (profileImg != null && profileImg.isNotEmpty)
+                    ? NetworkImage(profileImg)
+                    : null,
+                child: (profileImg == null || profileImg.isEmpty)
+                    ? Icon(Icons.person, size: 50, color: Colors.grey[600])
+                    : null,
               ),
+
               const SizedBox(height: 12),
-              const Text(
-                "Nama Pengguna",
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 4),
+
+              // NAMA
               Text(
-                "@username",
+                name,
+                style: const TextStyle(
+                    fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+
+              const SizedBox(height: 4),
+
+              // EMAIL
+              Text(
+                email,
                 style: TextStyle(fontSize: 14, color: Colors.grey[600]),
               ),
             ],
@@ -68,29 +94,47 @@ class ProfilePage extends StatelessWidget {
         const SizedBox(height: 30),
 
         /// MENU-MENU
-        _menuItem(Icons.shopping_bag_outlined, "Pesanan Saya", () {}),
+        _menuItem(
+          Icons.shopping_bag_outlined,
+          "Pesanan Saya",
+          () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const MyBookingsPage()),
+            );
+          },
+        ),
+
         _menuItem(Icons.favorite_border, "Favorit", () {}),
         _menuItem(Icons.settings_outlined, "Pengaturan", () {}),
 
-        /// LIHAT PROFIL → EditProfilePage
-        _menuItem(Icons.person_outline, "Lihat Profil", () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => EditProfilePage()),
-          );
-        }),
+        _menuItem(
+          Icons.person_outline,
+          "Lihat / Edit Profil",
+          () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const EditProfilePage()),
+            ).then((_) {
+              // setelah kembali dari edit, refresh tampilan
+              (context as Element).reassemble();
+            });
+          },
+        ),
 
         _menuItem(Icons.help_outline, "Bantuan", () {}),
 
         const SizedBox(height: 30),
 
-        /// Logout
+        /// LOGOUT
         ElevatedButton(
           style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.grey,
+            backgroundColor: Colors.grey[800],
             padding: const EdgeInsets.symmetric(vertical: 12),
           ),
-          onPressed: () {
+          onPressed: () async {
+            await AppSession.clear();
+
             Navigator.pushReplacement(
               context,
               MaterialPageRoute(builder: (_) => LoginPage()),
@@ -114,7 +158,9 @@ class ProfilePage extends StatelessWidget {
         leading: Icon(icon, size: 28),
         title: Text(title, style: const TextStyle(fontSize: 16)),
         trailing: const Icon(Icons.chevron_right),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
         tileColor: Colors.grey[200],
       ),
     );
