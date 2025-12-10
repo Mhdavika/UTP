@@ -1,26 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+
+import '../data_owner/admin_data_owner_view.dart';  // Gantilah dengan path yang sesuai
+import '../data_owner/admin_data_owner_viewmodel.dart';  // Gantilah dengan path yang sesuai
 
 class BikinOwnerPage extends StatelessWidget {
-  const BikinOwnerPage({super.key});
+  BikinOwnerPage({super.key}) {
+    // Mendaftarkan ViewModel untuk Data Owner
+    Get.put(AdminDataOwnerViewModel(), permanent: false);
+  }
 
   @override
   Widget build(BuildContext context) {
-    return const Padding(
-      padding: EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Bikin Akun Owner',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-          ),
-          SizedBox(height: 8),
-          Text(
-            'TODO: Form buat akun owner baru, atur owner_id, dsb.',
-            style: TextStyle(fontSize: 14, color: Colors.black54),
-          ),
-        ],
-      ),
-    );
+
+    return AdminDataOwnerView();  // Menampilkan AdminDataOwnerView
   }
 }

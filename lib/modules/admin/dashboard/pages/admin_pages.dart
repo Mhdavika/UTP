@@ -2,6 +2,8 @@
 
 import 'package:get/get.dart';
 import 'package:utp_flutter/modules/admin/dashboard/admin_dashboard_view.dart';
+import 'package:utp_flutter/modules/admin/dashboard/data_owner/admin_data_owner_binding.dart';
+import 'package:utp_flutter/modules/admin/dashboard/data_owner/admin_data_owner_view.dart';
 import 'package:utp_flutter/modules/admin/dashboard/data_villa/admin_data_villa_binding.dart';
 import 'package:utp_flutter/modules/admin/dashboard/data_villa/admin_data_villa_view.dart';
 
@@ -40,6 +42,11 @@ final List<GetPage> adminPages = [
     page: () => const AdminDataVillaView(),
     binding: AdminDataVillaBinding(),
   ),
+  GetPage(
+    name: '/admin_data_owner',
+    page: () => AdminDataOwnerView(),
+    binding: AdminDataOwnerBinding(),  // Menghubungkan Binding
+    ),
 
   // tinggal nambah page lain di sini...
 ];

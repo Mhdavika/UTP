@@ -45,7 +45,7 @@ class ContentAreaWidget extends GetView<AdminDashboardViewModel> {
           break;
 
         case 5:
-          child = const BikinOwnerPage();
+          child = BikinOwnerPage();
           break;
 
         default:

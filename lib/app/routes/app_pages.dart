@@ -1,6 +1,8 @@
 // lib/app/routes/app_pages.dart
 
 import 'package:get/get.dart';
+import 'package:utp_flutter/modules/admin/dashboard/data_owner/admin_data_owner_binding.dart';
+import 'package:utp_flutter/modules/admin/dashboard/data_owner/admin_data_owner_view.dart';
 
 // ADMIN
 import 'package:utp_flutter/modules/admin/dashboard/data_villa/admin_data_villa_binding.dart';
@@ -90,6 +92,12 @@ class AppPages {
       page: () => const AdminDataVillaView(),
       binding: AdminDataVillaBinding(),
     ),
+    GetPage(
+    name: '/admin_data_owner',
+    page: () => AdminDataOwnerView(),
+    binding: AdminDataOwnerBinding(),  // Menghubungkan Binding
+    ),
+
 
     // =====================
     // OWNER
